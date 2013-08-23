@@ -193,6 +193,12 @@ public class TictactoThreadedServer implements Runnable {
 				}
 			}
 			
+			if(thisName.equals(otherName)) {
+				if(!this.sharedBoard.getSameNameAlter()) {
+					this.sharedBoard.alterNames();
+				}
+			}
+			
 			thisName = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
 			otherName = communication.sPDetail+sharedBoard.getPlayerInfo(otherplayNum)+NLINE;
 			outClient.writeBytes(thisName);

@@ -34,6 +34,8 @@ public class TTTModelBoard {
 	private boolean pOneQuit;
 	private boolean pTwoQuit;
 	
+	private boolean sameNameAlter;
+	
 	private int fullVicAchieved;
 	private int victor;
 	private int readyForNR;
@@ -67,6 +69,7 @@ public class TTTModelBoard {
 		this.pTwoQuit = false;
 		this.fullVicAchieved = 0;
 		this.victor = 2;
+		this.sameNameAlter = false;
 	}
 
 //victory condition function. attempt to deduce if the victory occurred
@@ -568,7 +571,26 @@ public class TTTModelBoard {
 	public synchronized void resetReadyForNR() {
 		this.readyForNR = 0;
 	}
+	
+// HANDLING SAME NAMES
+	public synchronized void alterNames() {
+		String nameOne = players[PLAYERONE].getName();
+		String nameTwo = players[PLAYERTWO].getName();
+		
+		nameOne += (PLAYERONE+1);
+		nameTwo += (PLAYERTWO+1);
+		
+		players[PLAYERONE].setName(nameOne);
+		players[PLAYERTWO].setName(nameTwo);
+		
+		this.sameNameAlter = true;
+		
+	}
+	
+	public synchronized boolean getSameNameAlter() {
+		return this.sameNameAlter;
+	}
 }
 
-
+	
 
