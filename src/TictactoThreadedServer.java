@@ -103,7 +103,7 @@ public class TictactoThreadedServer implements Runnable {
 		} else {
 			System.out.println("Could not establish IO with this connectio");
 		}
-		
+		System.out.println("WE ARE OUT!");
 		try {
 			inClient.close();
 			outClient.close();
@@ -439,21 +439,23 @@ public class TictactoThreadedServer implements Runnable {
 		try {
 			input = inClient.readLine();
 			
-			String pattern = "^([A-Z]+:)([a-zA-Z0-9:\\s]*)$";
-			Pattern p = Pattern.compile(pattern);
-			Matcher m = p.matcher(input);
-			
-			if(m.find()) {
-				inPart1 = m.group(1);
-				inPart2 = m.group(2);
-				if(inPart1.equals(communication.cMove)) {
-					handleMove(inPart2);
-				} else if(inPart1.equals(communication.cQuit)) {
-					handleQuit();
-				} else if(inPart1.equals(communication.cReset)) {
-					handleReset(inPart2);
-				} else if(inPart1.equals(communication.cNew)) {
-					handleNewgame(inPart2);
+			if(input != null) {
+				String pattern = "^([A-Z]+:)([a-zA-Z0-9:\\s]*)$";
+				Pattern p = Pattern.compile(pattern);
+				Matcher m = p.matcher(input);
+				
+				if(m.find()) {
+					inPart1 = m.group(1);
+					inPart2 = m.group(2);
+					if(inPart1.equals(communication.cMove)) {
+						handleMove(inPart2);
+					} else if(inPart1.equals(communication.cQuit)) {
+						handleQuit();
+					} else if(inPart1.equals(communication.cReset)) {
+						handleReset(inPart2);
+					} else if(inPart1.equals(communication.cNew)) {
+						handleNewgame(inPart2);
+					}
 				}
 			}
 			
