@@ -72,11 +72,13 @@ public class TictactoThreadedServer implements Runnable {
 			inClient = new BufferedReader(new InputStreamReader(connect.getInputStream()));
 			outClient = new DataOutputStream(connect.getOutputStream());
 		} catch(IOException e) {
+			System.out.println("Could not establish proper IO at the beginning");
 			properConnect = false;
 		}
-
+		
 		if(properConnect) {
 			while(this.connect.isConnected() && (!this.tellQuit)) {
+				
 				if(!initName){
 					initNameStats();
 					initName = true;
@@ -90,20 +92,23 @@ public class TictactoThreadedServer implements Runnable {
 				
 //first part of the loop is finding out state of board and sending messages
 //to the player
-				if(this.sharedBoard.getFullVic() > 0) {
-					this.vict = true;
+				if(this.myPlayNum < 2) {
+					if(this.sharedBoard.getFullVic() > 0) {
+						this.vict = true;
+					} else {
+						this.vict = false;
+					}
+	
+					this.yourTurn = myTurn();
+					serverSendMessages();
+					serverReceiveMessages();
 				} else {
-					this.vict = false;
+					this.tellQuit = true;
 				}
-				this.yourTurn = myTurn();
-				serverSendMessages();
-				serverReceiveMessages();
-				
 			}
 		} else {
 			System.out.println("Could not establish IO with this connectio");
 		}
-		System.out.println("WE ARE OUT!");
 		try {
 			inClient.close();
 			outClient.close();
@@ -175,49 +180,53 @@ public class TictactoThreadedServer implements Runnable {
 				input = inClient.readLine();
 				thisName = isName(input); 
 			}
-
-			sharedBoard.giveTheName(thisName, this.myPlayNum);
-			output = communication.sWaitName+NLINE;
-			outClient.writeBytes(output);
-
-		/*NOTE TO PROGRAMMER: PLEASE ASK WHY THE FOLLOWING CODE WON'T WORK:
-		
- 			while(otherName == null) {
-				otherName = sharedBoard.otherNameGiven(this.myPlayNum);
-			}
-		 */
-			while(spec == false) {
-				otherName = sharedBoard.otherNameGiven(this.myPlayNum);
-				if(otherName != null) {
-					spec = true;
-				}
-			}
+			//sharedBoard.giveTheName(thisName, this.myPlayNum);
+			if(this.myPlayNum < 2) {
+				sharedBoard.giveTheName(thisName, this.myPlayNum);
+				output = communication.sWaitName+NLINE;
+				outClient.writeBytes(output);
+	
+			/*NOTE TO PROGRAMMER: PLEASE ASK WHY THE FOLLOWING CODE WON'T WORK:
 			
-			if(thisName.equals(otherName)) {
-				if(!this.sharedBoard.getSameNameAlter()) {
-					this.sharedBoard.alterNames();
+	 			while(otherName == null) {
+					otherName = sharedBoard.otherNameGiven(this.myPlayNum);
 				}
-			}
-			
-			thisName = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
-			otherName = communication.sPDetail+sharedBoard.getPlayerInfo(otherplayNum)+NLINE;
-			outClient.writeBytes(thisName);
-			outClient.writeBytes(otherName);
-
-			input = inClient.readLine();
-			while(!input.equals(communication.scOK)) {
+			 */
+				while(spec == false) {
+					otherName = sharedBoard.otherNameGiven(this.myPlayNum);
+					if(otherName != null) {
+						spec = true;
+					}
+				}
+				
+				if(thisName.equals(otherName)) {
+					if(!this.sharedBoard.getSameNameAlter()) {
+						this.sharedBoard.alterNames();
+					}
+				}
+				
+				thisName = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
+				otherName = communication.sPDetail+sharedBoard.getPlayerInfo(otherplayNum)+NLINE;
+				outClient.writeBytes(thisName);
+				outClient.writeBytes(otherName);
+	
 				input = inClient.readLine();
-			}
-
-			if(sharedBoard.yourTurn(this.myPlayNum)) {
-				input = communication.sPlay+NLINE;
-				this.yourTurn = true;
+				while(!input.equals(communication.scOK)) {
+					input = inClient.readLine();
+				}
+	
+				if(sharedBoard.yourTurn(this.myPlayNum)) {
+					input = communication.sPlay+NLINE;
+					this.yourTurn = true;
+				} else {
+					input = communication.sWaitMove+NLINE;
+					this.yourTurn = false;
+				}
+				outClient.writeBytes(input);
 			} else {
-				input = communication.sWaitMove+NLINE;
-				this.yourTurn = false;
+				output = communication.sReject+NLINE;
+				outClient.writeBytes(output);
 			}
-			outClient.writeBytes(input);
-
 		} catch(IOException initial) {
 			System.out.println("IO not working properly");
 		}
@@ -255,7 +264,6 @@ public class TictactoThreadedServer implements Runnable {
 							SEPERATE+this.sharedBoard.endGame()+NLINE;
 				}
 				if(shouldSendMessage(0)) {
-					System.out.println("This player is being sent victory: "+sharedBoard.getPlayerInfo(myPlayNum));
 					outClient.writeBytes(this.messages[0]);
 					
 					output = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
@@ -270,8 +278,6 @@ public class TictactoThreadedServer implements Runnable {
 			
 			if(this.newgame) {
 				
-				System.out.println("THIS PLAYER HAS GOT TO NEW GAME: "+this.myPlayNum);
-				
 				output = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
 				outClient.writeBytes(output);
 				output = communication.sPDetail+sharedBoard.getPlayerInfo(otherplayNum)+NLINE;
@@ -279,11 +285,9 @@ public class TictactoThreadedServer implements Runnable {
 				
 				if(this.victor < 2) {
 					if(this.myPlayNum == this.victor) {
-						System.out.println("PLAYER "+this.myPlayNum+" won and is waiting");
 						this.messages[5] = communication.sWaitBegin+NLINE;
 						this.sharedBoard.incReadyForNR();
 					} else {
-						System.out.println("PLAYER "+this.myPlayNum+" lost and will go next");
 						this.messages[5] = communication.sPlay+NLINE;
 						this.sharedBoard.incReadyForNR();
 					}
@@ -471,10 +475,6 @@ public class TictactoThreadedServer implements Runnable {
 //consists of a number 1-9 which needs to be given to the board
 //and the other player.
 	public void handleMove(String part) {
-		
-		//PRINT STATEMENT
-		System.out.println("handling move from player: "+this.myPlayNum);
-		//PRINT STATEMENT
 		
 		int move = Integer.parseInt(part);
 		this.sharedBoard.doMove(this.myPlayNum, move);
