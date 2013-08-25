@@ -1,11 +1,14 @@
-
-
-//Using MVC this is the model. It stores the data and does some of the
-//calculations for the controller.
+/*
+ * Author: John Massy-Greene
+ * Program: TicTacTo3.0 - Internet Multiplayer
+ * Date: 25/8/13
+ * Comment: This is the class that represents and holds information about the TicTacTo
+ * 			board
+ */
 
 public class TTTModelBoard {
 
-//global variables for the modal
+//global variables
 	private final int ROWCOL = 3;
 //the number of reset/newgame booleans needed in their respective arrays
 	private final int CALLNR = 3;
@@ -27,26 +30,33 @@ public class TTTModelBoard {
 	private boolean currentMoved;
 //curentMove  tells the other thread what move they've done
 	private int currentMove;
-	
+
+//booleans to determine if each players name has been received. Used in the
+//setting up of the game
 	private boolean pOneNameGot;
 	private boolean pTwoNameGot;
 	
+//booleans to determine if either player has quit
 	private boolean pOneQuit;
 	private boolean pTwoQuit;
-	
+
+//boolean to determine if both players have the same name and thus
+//their names need to be altered as to not confuse the clients view
 	private boolean sameNameAlter;
 	
 	private int fullVicAchieved;
 	private int victor;
 	private int readyForNR;
 //three flags
-//1st flag = Does this player want to reset
-//2nd flag = Has the other player answered the reset
+//1st flag = Does this player want to reset or new game
+//2nd flag = Has the other player answered the reset or new game
 //3rd flag = what is the other player's answer
 	private boolean[] pOneReset = {false, false, false};
 	private boolean[] pTwoReset = {false, false, false};
 	private boolean[] pOneNew = {false, false, false};
 	private boolean[] pTwoNew = {false, false, false};
+	
+	
 //constructor requires the names of both the players
 	public TTTModelBoard() {
 
@@ -101,7 +111,8 @@ public class TTTModelBoard {
 //this function checks if the move a player wants to do has already
 //been done. If the square matches the blank it returns true which
 //means the move is valid
-	
+//UPDATE: I don't think this needs to be here since the client
+//        checks this itself
 	public boolean checkTaken(int x, int y) {
 		boolean result = false;
 		if(titato[x][y] == BLANKS) {
@@ -217,7 +228,7 @@ public class TTTModelBoard {
 //records a move with the board if its valid
 //This function has changed since 2.0
 //it no longer checks the move since validity checks
-//is given to the player.
+//are done by the player.
 	public synchronized void doMove(int p, int move){
 
 		int x = 0;
@@ -238,7 +249,7 @@ public class TTTModelBoard {
 		}
 		this.doneMove();
 	}
-//helper method to determine the x-coordinate
+//helper method to determine the x-coordinate of a move
 	public int detXCoor(int move) {
 		int result = 0;
 		if((move%ROWCOL)>0) {
@@ -248,7 +259,7 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
-//helper methods to determine the y-coordinate
+//helper method to determine the y-coordinate of a move
 	public int detYCoor(int move) {
 		int result = 0;
 		if((move%ROWCOL)>0) {
@@ -275,11 +286,10 @@ public class TTTModelBoard {
 
 //prepares the messages that display who won the game
 //and how they won it
+//also sets the victor variable
 	public synchronized String endGame() {
 
 		String msg = "";
-		//String pNamae;
-		//msg = (players[this.currentPlayer].getName()); 
 		
 		switch(this.fullVicAchieved) {
 			case 1:
@@ -338,7 +348,9 @@ public class TTTModelBoard {
 		return msg;
 	}
 	
-// METHODS ADDED FOR THREADS
+//-----------METHODS ADDED FOR THREADS-------------------------
+
+	//method is called by the threads asking if its their turn
 	public boolean yourTurn(int thisPlayer) {
 		boolean result = false;
 		if(this.currentPlayer == thisPlayer) {
@@ -346,7 +358,8 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
-	
+	//method used in setting up the game. Gives the board the name
+	//of the player
 	public synchronized void giveTheName(String name, int i) {
 		players[i].setName(name);
 		players[i].setPiece(i);
@@ -357,7 +370,8 @@ public class TTTModelBoard {
 		}
 	}
 	
-
+	//method used in setting up the game. Gives the player
+	//the name of their opponent
 	public synchronized String otherNameGiven(int i) {
 		String result = null;
 		if(i == PLAYERONE) {
@@ -372,11 +386,13 @@ public class TTTModelBoard {
 		return result;
 	}
 	
+//gets the information of a player based on their player number(player 1, player2)
 	public String getPlayerInfo(int i) {
 		String result;
 		result = players[i].getName()+":"+players[i].getPiece()+":"+players[i].getVictories();
 		return result;
 	}
+	
 //these methods are used to set or find out if either player has completed
 //their move yet.
 	public boolean hasMoved() {
@@ -389,6 +405,8 @@ public class TTTModelBoard {
 	public int getMove() {
 		return this.currentMove;
 	}
+	
+//switches the current player to the player whose turn it is next
 	public synchronized void switchPlayers() {
 		if(this.currentPlayer == PLAYERONE) {
 			this.currentPlayer = PLAYERTWO;
@@ -398,19 +416,26 @@ public class TTTModelBoard {
 		this.currentMoved = false;
 		this.currentMove = 0;
 	}
+//sets the current player to a specific person. This is used during
+//new games when the person who is going to move first is the loser of the last game
 	public synchronized void setCurrentPlayer(int i) {
 		this.currentPlayer = i;
 	}
+	
+	
+	
 //these are methods used for checking and setting
 //the booleans used to tell players if they want to reset
 	
+//telling the board that the player wants a reset
 	public synchronized void iWantReset(int i) {
 		if(i == PLAYERONE) {
 			this.pOneReset[0] = true;
 		} else {
 			this.pTwoReset[0] = true;
 		}
-	}	
+	}
+//asking the board if the other player wants a reset
 	public boolean doesOtherReset(int i) {
 		boolean result;
 		if(i == PLAYERONE) {
@@ -420,6 +445,7 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
+//asking the board if the other player has answered a reset request
 	public boolean otherAnswerReset(int i) {
 		boolean result;
 		if(i == PLAYERONE) {
@@ -429,6 +455,7 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
+//tellling the board that the player is answering a reset request
 	public synchronized void answerReset(int i, boolean answer) {
 		if(i == PLAYERONE) {
 			pTwoReset[1] = true;
@@ -438,6 +465,7 @@ public class TTTModelBoard {
 			pOneReset[2] = answer;
 		}
 	}
+//reset a particular players reset request booleans
 	public synchronized void resetMyReset(int i) {
 		if(i == PLAYERONE) {
 			for(int x=0; x<CALLNR; x++) {
@@ -451,6 +479,8 @@ public class TTTModelBoard {
 	}
 	//these are methods used for checking and setting
 	//the booleans used to tell players if they want a new game
+	
+//telling the board that the player wants a new game
 	public synchronized void iWantNew(int i) {
 		if(i == PLAYERONE) {
 			this.pOneNew[0] = true;
@@ -458,6 +488,7 @@ public class TTTModelBoard {
 			this.pTwoNew[0] = true;
 		}
 	}
+//asking the board if the other player wants a new game
 	public boolean doesOtherNew(int i) {
 		boolean result;
 		if(i == PLAYERONE) {
@@ -467,6 +498,7 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
+//asking the board if the other player has answered a new game request
 	public boolean otherAnswerNew(int i) {
 		boolean result;
 		if(i == PLAYERONE) {
@@ -476,17 +508,17 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
+//telling the board that they are answering a new game request	
 	public synchronized void answerNew(int i, boolean answer) {
 		if(i == PLAYERONE) {
 			pTwoNew[1] = true;
 			pTwoNew[2] = answer;
-			System.out.println("PLAYER ONE ANSWERED: "+answer);
 		} else {
 			pOneNew[1] = true;
 			pOneNew[2] = answer;
-			System.out.println("PLAYER TWO ANSWERED: "+answer);
 		}
 	}
+//reset a particular players new game request booleans
 	public synchronized void resetMyNew(int i) {
 		if(i == PLAYERONE) {
 			for(int x=0; x<CALLNR; x++){
@@ -536,15 +568,21 @@ public class TTTModelBoard {
 			pTwoQuit = true;
 		}
 	}
-	
+
+//the type of victory that was achieved(or not achieved in the case of a draw)
 	public int getFullVic() {
 		return this.fullVicAchieved;
 	}
-	
+
+//tell no one to move
 	public void noMove() {
 		this.currentMoved = false;
 	}
 	
+//determine the player from the move that was made on the board
+//this is a helper function used in the victory function
+//to record the victor and send the client the message about
+//who won
 	public int detPlayer(char c) {
 		int result;
 		if(players[0].getPiece() == c) {
@@ -554,7 +592,7 @@ public class TTTModelBoard {
 		}
 		return result;
 	}
-	
+//setter and getter for the current games victor
 	public void setVictor(int i) {
 		this.victor = i;
 	}
@@ -562,6 +600,8 @@ public class TTTModelBoard {
 		return this.victor;
 	}
 	
+//helper functions used during new games and reset requests
+//to send the message, to the person whose turn it IS NOT, first
 	public synchronized int getReadyForNR() {
 		return this.readyForNR;
 	}
@@ -573,6 +613,8 @@ public class TTTModelBoard {
 	}
 	
 // HANDLING SAME NAMES
+//if two players have the same name then their names are altered
+//They're names have their player number appended.
 	public synchronized void alterNames() {
 		String nameOne = players[PLAYERONE].getName();
 		String nameTwo = players[PLAYERTWO].getName();
@@ -586,7 +628,7 @@ public class TTTModelBoard {
 		this.sameNameAlter = true;
 		
 	}
-	
+//have each players names been altered
 	public synchronized boolean getSameNameAlter() {
 		return this.sameNameAlter;
 	}

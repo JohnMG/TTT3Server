@@ -1,6 +1,10 @@
-
-
-//Using MVC this is part of the modal. It represents the player. 
+/*
+ * Author: John Massy-Greene
+ * Program: TicTacTo3.0 - Internet Multiplayer
+ * Date: 25/8/13
+ * Comment: This is the class that represents and holds information about the players
+ * 			Their names, piece and victories
+ */
 
 public class TTTModelPlayer {
 	public final char NOUGHT = 'O';
@@ -40,8 +44,8 @@ public class TTTModelPlayer {
 	public void resetVictory() {
 		this.victories = 0;
 	}
-//helper function that is used to get the places piece and victories
-//so the controlletr can tell the view how to represent the player.
+//helper function that is used to get the piece and victories
+//used by the server to help the client update its view
 	public String pieceAndVictory(){
 		String result = "Piece: "+this.piece+" Won: "+this.victories+" times";
 		return result;

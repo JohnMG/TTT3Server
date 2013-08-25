@@ -1,7 +1,11 @@
-/*TO DO: 
- * - Record who winner was
- * - On new game make the loser the person who gets to go first
-*/
+/*
+ * Author: John Massy-Greene
+ * Program: TicTacTo3.0 - Internet Multiplayer
+ * Date: 25/8/13
+ * Comment: This is a thread created by the server to handle the connection for a player
+ * 			One thread is created for each player. The threads communicate with each other
+ * 			via 1 TTTModelBoard that the Server created and gave to both players. 
+ */
 
 import java.io.*;
 import java.net.*;
@@ -9,6 +13,8 @@ import java.util.regex.*;
 
 
 public class TictactoThreadedServer implements Runnable {
+	
+	//constant variables
 	private final char NLINE = '\n';
 	private final String PROC = "PROCESSED";
 	private final String SEPERATE = ":";
@@ -17,6 +23,7 @@ public class TictactoThreadedServer implements Runnable {
 //the number of receive messages
 	private final int RECTYPES = 7;
 	
+	//variables required for maintaining a connection between the client and the other thread
 	private Socket connect;
 	private TTTModelBoard sharedBoard = new TTTModelBoard();
 	private BufferedReader inClient;
@@ -42,9 +49,11 @@ public class TictactoThreadedServer implements Runnable {
 	private boolean newgame; 
 	private boolean vict;
 	
+//the variables for who is player one and player 2
 	private int myPlayNum;
 	private int otherplayNum;
 	
+//who the victor is. gets reset after each game
 	private int victor;
 	
 	
@@ -64,6 +73,8 @@ public class TictactoThreadedServer implements Runnable {
 		this.victor = 2;
 	}
 	
+//the main function which sets up the connection and then communicates back and forth between
+//the clients
 	public void run() {
 		boolean properConnect = true;
 		boolean initName = false;
@@ -80,6 +91,7 @@ public class TictactoThreadedServer implements Runnable {
 			while(this.connect.isConnected() && (!this.tellQuit)) {
 				
 				if(!initName){
+//establishing of players names and the pieces that that they are assigned. Happens once.
 					initNameStats();
 					initName = true;
 					try {
@@ -91,7 +103,7 @@ public class TictactoThreadedServer implements Runnable {
 				
 				
 //first part of the loop is finding out state of board and sending messages
-//to the player
+//to the player. And then receiving their response
 				if(this.myPlayNum < 2) {
 					if(this.sharedBoard.getFullVic() > 0) {
 						this.vict = true;
@@ -120,7 +132,7 @@ public class TictactoThreadedServer implements Runnable {
 
 //basically a helper function that determines if a message should be sent or not
 //very small but stops me from repeating a really long command every time
-//i want to send a message
+//i want to send a message but only send it once.
 	public boolean shouldSendMessage(int i) {
 		boolean result = false;
 		if((messages[i]!=null) && (!messages[i].equals(PROC))) {
@@ -128,14 +140,18 @@ public class TictactoThreadedServer implements Runnable {
 		}
 		return result;
 	}
-	
+
+//a function that determines if you have given a response to the other player's
+//request for a new game or reset.
 	public boolean haveIAnsweredNew() {
 		return this.sharedBoard.doesOtherAnswerNR(otherplayNum, NEWGAMECALL);
 	}
 	public boolean haveIAnsweredReset(){
 		return this.sharedBoard.doesOtherAnswerNR(otherplayNum, RESETCALL);
 	}
-	
+
+//function which determines what player number the opponent
+//is from your player number
 	public int otherPlayNum(int i) {
 		int result;
 		if(i == 0) {
@@ -148,10 +164,14 @@ public class TictactoThreadedServer implements Runnable {
 	public Socket getSocket() { 
 		return this.connect;
 	}
+//determines if its your turn or not
 	public boolean myTurn() {
 		return sharedBoard.yourTurn(this.myPlayNum);
 	}
 
+//a function to determine if the player has sent an valid
+//name or not. Not really so helpful but it strips the players
+//name from the command send to the server.
 	public String isName(String fromClient) {
 		String result = null;
 		String pattern = "PLAYERNAME:(\\w+)";
@@ -231,7 +251,7 @@ public class TictactoThreadedServer implements Runnable {
 			System.out.println("IO not working properly");
 		}
 	}
-//------------------------------------------
+//the function which send's messages to players depending on the state of the game in play
 	public void serverSendMessages() {
 		
 		String output;
@@ -257,7 +277,8 @@ public class TictactoThreadedServer implements Runnable {
 				}
 			}
 					
-			
+//if a victory has occurred then send the details of who won, how they won and an update
+//of each players details to show who an increase in one of the players victories
 			if(this.vict) {
 				if(this.messages[0] == null) {
 					this.messages[0] = communication.sEnd+this.sharedBoard.getFullVic()+
@@ -275,14 +296,16 @@ public class TictactoThreadedServer implements Runnable {
 					this.messages[0] = PROC;
 				}
 			}
-			
+
+//this gets sent to the player if a new game or a reset request is going to happen
 			if(this.newgame) {
-				
+//first both players details are updated
 				output = communication.sPDetail+sharedBoard.getPlayerInfo(myPlayNum)+NLINE;
 				outClient.writeBytes(output);
 				output = communication.sPDetail+sharedBoard.getPlayerInfo(otherplayNum)+NLINE;
 				outClient.writeBytes(output);
-				
+
+//if a victory happened then tell the loser of the game that they can go first
 				if(this.victor < 2) {
 					if(this.myPlayNum == this.victor) {
 						this.messages[5] = communication.sWaitBegin+NLINE;
@@ -291,6 +314,7 @@ public class TictactoThreadedServer implements Runnable {
 						this.messages[5] = communication.sPlay+NLINE;
 						this.sharedBoard.incReadyForNR();
 					}
+//if a reset happened, then whoever's turn it was last game, goes first this game
 				} else {
 					if(myTurn()) {
 						System.out.println("ENTERED RESET TERRITORY");
@@ -308,7 +332,13 @@ public class TictactoThreadedServer implements Runnable {
 				this.messages[2] = null;
 				this.messages[0] = null;
 			}
-			
+
+//both the following 2 functions are part of a new game or reset.
+//the person whose turn it IS NOT gets told about their turn first. Then then
+//player whose turn it is gets told it is their turn. The reason I have
+//structured it like this is because I want the client to be ready for the
+//next turn, so they suddenly aren't overwhelmed by the a new game and a sudden
+//move in the game
 			if(this.sharedBoard.getReadyForNR() == 2) {
 				if((this.myPlayNum != this.victor) || (myTurn())) {
 					System.out.println("PLAYER "+this.myPlayNum+" is going FIRST");
@@ -343,9 +373,6 @@ public class TictactoThreadedServer implements Runnable {
 					this.messages[2] = PROC;
 				}
 			} else {
-				//reset the new boolean here because the other player
-				//will reset their boolean if this player says no to
-				//the new game
 				this.messages[2] = null;
 			}
 			
@@ -361,12 +388,10 @@ public class TictactoThreadedServer implements Runnable {
 					System.out.println("THE OTHER PERSON WANTS A NEW GAME");
 				}
 			} else {
-				//reset the new boolean here because the other player
-				//will reset their boolean if this player says no to
-				//the new game
 				this.messages[3] = null;
 			}
-			
+
+//checks to see if the other person has quit the game
 			if(sharedBoard.doesOtherQuit(this.myPlayNum)){
 				if(this.messages[4] == null) {
 					this.messages[4] = communication.sTheyQuit+NLINE;
@@ -390,10 +415,6 @@ public class TictactoThreadedServer implements Runnable {
 
 						//reset the other players newgame as well just in case
 						//both players have decided to call it at same time.
-						
-						//this.sharedBoard.resetBoard();
-						
-						//this.sharedBoard.switchPlayers();
 						
 						this.newgame = true;
 						this.messages[0] = null;
@@ -435,7 +456,9 @@ public class TictactoThreadedServer implements Runnable {
 			System.out.println("Cant send");
 		}
 	}
-	//-----------------------------------------------------
+
+//function that receives messages from the client and updates the board and the other player
+//with their actions
 	public void serverReceiveMessages() {
 		String input;
 		String inPart1;
@@ -447,7 +470,8 @@ public class TictactoThreadedServer implements Runnable {
 				String pattern = "^([A-Z]+:)([a-zA-Z0-9:\\s]*)$";
 				Pattern p = Pattern.compile(pattern);
 				Matcher m = p.matcher(input);
-				
+//the communication from the client is very limited. They can only send
+//moves, quits, reset requests(and responses) and new game requests(and responses)
 				if(m.find()) {
 					inPart1 = m.group(1);
 					inPart2 = m.group(2);
@@ -503,7 +527,9 @@ public class TictactoThreadedServer implements Runnable {
 			this.sharedBoard.answerReset(myPlayNum, false);
 		}
 	}
-	
+//In handling the new game. The server has to deal with two types.
+//the first type is if the player wants to have a new game. The second type
+//is if the player is responding to a new game call	
 	public void handleNewgame(String part) {
 		if(part.equals("")) {
 			this.newGameAsk = true;
@@ -524,7 +550,8 @@ public class TictactoThreadedServer implements Runnable {
 			this.sharedBoard.answerNew(myPlayNum, false);
 		}
 	}
-	
+
+//function to reset both players reset and new game calls
 	public void resetNRBothPlayers() {
 		this.sharedBoard.resetMyNew(myPlayNum);
 		this.sharedBoard.resetMyNew(otherplayNum);

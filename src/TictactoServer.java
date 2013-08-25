@@ -1,4 +1,11 @@
-
+/*
+ * Author: John Massy-Greene
+ * Program: TicTacTo3.0 - Internet Multiplayer
+ * Date: 25/8/13
+ * Comment: This is the main part of the server. It accepts all the connections and
+ *          gives to the executor pool to manage. From their it either accepts the connection
+ *          or rejects them depending on how many players are already present.
+ */
 
 
 import java.io.*;
@@ -10,7 +17,9 @@ public class TictactoServer {
 	private final static int MINPORT = 1023;
 	private final static int MAXPORT = 65536;
 	private final static int TTTSERVERARGS = 1;
-	
+
+//linked lists to handle the rejected connections and the
+//connections who will be playing against each other
 	private static LinkedList<TictactoThreadedServer> players;
 	private static LinkedList<TictactoThreadedServer> rejects;
 	private static boolean isClosed;
@@ -28,9 +37,9 @@ public class TictactoServer {
 		TTTModelBoard rejectBoard = new TTTModelBoard();
 		ServerSocket welcome;
 		playerDiscon = 0;
-		
+
+//setting of the port number to be used
 		if(args.length != TTTSERVERARGS) {
-			//passes = false
 			serverPort = 2064;
 		} else {
 			serverPort = Integer.parseInt(args[0]);
@@ -46,7 +55,8 @@ public class TictactoServer {
 				
 				BlockingQueue<Runnable> queuedThreads = new ArrayBlockingQueue<Runnable>(10);
 				ThreadPoolExecutor pool = new ThreadPoolExecutor(6, 12, 300, TimeUnit.MILLISECONDS, queuedThreads);
-				
+
+//the accepting or rejecting of connections
 				while(!isClosed) {
 					if(connects < 2) {
 						System.out.println("Finding new player");
@@ -77,7 +87,9 @@ public class TictactoServer {
 			System.out.println("Ports need to be more than 1023 and less than 65536");
 		}
 	}
-	
+
+//a function to check if any of the players has quit. If both players have quit then
+//return a true and thus tell the server to shutdown.
 	public static boolean testPlayersClosed() {
 		boolean result = false;
 		for(int i=0; i<players.size(); i++) {
@@ -92,7 +104,7 @@ public class TictactoServer {
 		}
 		return result;
 	}
-	
+//removes the rejected connections once they have disconnected from the server
 	public static void testRejectionClosed() {
 		for(int i=0; i<rejects.size(); i++) {
 			if(rejects.get(i).getSocket().isClosed()) {
